@@ -2,6 +2,15 @@ const express = require('express');
 const app = express();
 const port = 3000;
 
+// ANSI color codes
+const colors = {
+    reset: '\x1b[0m',
+    green: '\x1b[32m',
+    red: '\x1b[31m',
+    blue: '\x1b[34m',
+    white: '\x1b[37m'
+};
+
 // Middleware to parse JSON bodies
 app.use(express.json());
 
@@ -21,11 +30,25 @@ function formatOcppMessage(messageStr) {
             type: messageTypes[messageTypeId] || 'UNKNOWN',
             messageId,
             action,
-            payload: payload || message[2] // for responses, payload is at index 2
+            payload: payload || message[2]
         };
     } catch (e) {
         return null;
     }
+}
+
+// Get block color based on message type
+function getBlockColor(formattedMessage) {
+    if (!formattedMessage) return colors.white;
+    
+    if (formattedMessage.type === 'REQUEST') return colors.blue;
+    if (formattedMessage.type === 'RESPONSE') {
+        if (formattedMessage.payload?.status === 'Accepted') return colors.green;
+        return colors.red;
+    }
+    if (formattedMessage.type === 'ERROR') return colors.red;
+    
+    return colors.white;
 }
 
 // Format the entire webhook payload
@@ -33,8 +56,17 @@ function formatWebhookLog(body) {
     const timestamp = new Date().toISOString();
     const lines = [''];
     
+    // Determine block color
+    let blockColor = colors.white;
+    let formattedMessage = null;
+    
+    if (body.event === 'message') {
+        formattedMessage = formatOcppMessage(body.message);
+        blockColor = getBlockColor(formattedMessage);
+    }
+    
     // Add separator
-    lines.push('╔════════════════════════════════════════════════════════════');
+    lines.push(blockColor + '╔════════════════════════════════════════════════════════════');
     lines.push(`║ TIME: ${timestamp}`);
     lines.push(`║ STATION: ${body.stationId}`);
     lines.push(`║ EVENT: ${body.event.toUpperCase()}`);
@@ -48,7 +80,6 @@ function formatWebhookLog(body) {
         lines.push(`║ ORIGIN: ${body.origin.toUpperCase()}`);
         lines.push('║ ');
         
-        const formattedMessage = formatOcppMessage(body.message);
         if (formattedMessage) {
             lines.push(`║ Message Type: ${formattedMessage.type}`);
             lines.push(`║ Message ID: ${formattedMessage.messageId}`);
@@ -66,7 +97,7 @@ function formatWebhookLog(body) {
     }
     
     // Add closing separator
-    lines.push('╚════════════════════════════════════════════════════════════');
+    lines.push('╚════════════════════════════════════════════════════════════' + colors.reset);
     lines.push('');
     
     return lines.join('\n');
