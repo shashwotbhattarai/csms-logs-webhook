@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const port = 3000;
 
-// ANSI color codes
+
 const colors = {
     reset: '\x1b[0m',
     green: '\x1b[32m',
@@ -11,10 +11,10 @@ const colors = {
     white: '\x1b[37m'
 };
 
-// Middleware to parse JSON bodies
+
 app.use(express.json());
 
-// Utility function to format OCPP message
+
 function formatOcppMessage(messageStr) {
     try {
         const message = JSON.parse(messageStr);
@@ -37,26 +37,24 @@ function formatOcppMessage(messageStr) {
     }
 }
 
-// Get block color based on message type
+
 function getBlockColor(formattedMessage) {
     if (!formattedMessage) return colors.white;
     
     if (formattedMessage.type === 'REQUEST') return colors.blue;
     if (formattedMessage.type === 'RESPONSE') {
-        if (formattedMessage.payload?.status === 'Accepted') return colors.green;
-        return colors.red;
+        return colors.green;
     }
     if (formattedMessage.type === 'ERROR') return colors.red;
     
     return colors.white;
 }
 
-// Format the entire webhook payload
 function formatWebhookLog(body) {
     const timestamp = new Date().toISOString();
     const lines = [''];
     
-    // Determine block color
+  
     let blockColor = colors.white;
     let formattedMessage = null;
     
@@ -65,13 +63,12 @@ function formatWebhookLog(body) {
         blockColor = getBlockColor(formattedMessage);
     }
     
-    // Add separator
+
     lines.push(blockColor + '╔════════════════════════════════════════════════════════════');
     lines.push(`║ TIME: ${timestamp}`);
     lines.push(`║ STATION: ${body.stationId}`);
     lines.push(`║ EVENT: ${body.event.toUpperCase()}`);
     
-    // Format based on event type
     if (body.event === 'connected' || body.event === 'disconnected') {
         lines.push('║ ');
         lines.push(`║ Connection Status: ${body.event.toUpperCase()}`);
@@ -96,7 +93,6 @@ function formatWebhookLog(body) {
         }
     }
     
-    // Add closing separator
     lines.push('╚════════════════════════════════════════════════════════════' + colors.reset);
     lines.push('');
     
